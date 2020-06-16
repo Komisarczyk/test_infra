@@ -35,7 +35,7 @@ static inline int vec_f2d_alloc(struct vec_f2d* v, size_t n, size_t m)
 }
 
 /* Destroys a 2d float memref */
-static inline int vec_f2d_destroy(struct vec_f2d* v)
+static inline void vec_f2d_destroy(struct vec_f2d* v)
 {
 	free(v->allocatedPtr);
 }
