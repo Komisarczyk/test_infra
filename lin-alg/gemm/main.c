@@ -1,4 +1,4 @@
-#include "memref.h"
+#include "../../memref.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -25,19 +25,22 @@ extern void mm(const float *a_allocatedptr, const float *a_alignedptr,
                int64_t b_offset, int64_t b_sizes0, int64_t b_sizes1,
                int64_t b_strides0, int64_t b_strides1, float *o_allocatedptr,
                float *o_alignedptr, int64_t o_offset, int64_t o_sizes0,
-               int64_t o_sizes1, int64_t o_strides0, int64_t o_strides1);
+               int64_t o_sizes1, int64_t o_strides0, int64_t o_strides1, const float alpha, const float beta);
 
 /* Reference implementation of a matrix multiplication */
 void mm_refimpl(const struct vec_f2d *a, const struct vec_f2d *b,
-                struct vec_f2d *c) {
+                struct vec_f2d *c)
+{
 
-  float beta = 1.0f;
-  float alpha = 1.0f;
+  float beta = 1.3f;
+  float alpha = 1.2f;
 
-  for (int64_t i = 0; i < c->sizes[0]; i++) {
+  for (int64_t i = 0; i < c->sizes[0]; i++)
+  {
     for (int64_t j = 0; j < c->sizes[1]; j++)
       vec_f2d_set(c, i, j, vec_f2d_get(c, i, j) * beta);
-    for (int64_t k = 0; k < a->sizes[1]; k++) {
+    for (int64_t k = 0; k < a->sizes[1]; k++)
+    {
       for (int64_t j = 0; j < c->sizes[1]; j++)
         vec_f2d_set(c, i, j,
                     vec_f2d_get(c, i, j) +
@@ -47,18 +50,21 @@ void mm_refimpl(const struct vec_f2d *a, const struct vec_f2d *b,
 }
 
 /* Initialize matrix with value x+y at position (x, y) */
-void init_matrix(struct vec_f2d *m) {
+void init_matrix(struct vec_f2d *m)
+{
   for (int64_t y = 0; y < m->sizes[0]; y++)
     for (int64_t x = 0; x < m->sizes[1]; x++)
-      vec_f2d_set(m, x, y, x + y);
+      vec_f2d_set(m, x, y, x + 2 * y);
 }
 
-void die_usage(const char *program_name) {
+void die_usage(const char *program_name)
+{
   fprintf(stderr, "Usage: %s [-v]\n", program_name);
   exit(1);
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
   struct vec_f2d a, b, o, o_ref;
   int verbose = 1;
   int n = 4;
@@ -66,7 +72,8 @@ int main(int argc, char **argv) {
   int m = 4;
 
   if (vec_f2d_alloc(&a, n, k) || vec_f2d_alloc(&b, k, m) ||
-      vec_f2d_alloc(&o, n, m) || vec_f2d_alloc(&o_ref, n, m)) {
+      vec_f2d_alloc(&o, n, m) || vec_f2d_alloc(&o_ref, n, m))
+  {
     fprintf(stderr, "Allocation failed");
     return 1;
   }
@@ -74,7 +81,8 @@ int main(int argc, char **argv) {
   init_matrix(&a);
   init_matrix(&b);
 
-  if (verbose) {
+  if (verbose)
+  {
     puts("B:");
     vec_f2d_dump(&b);
     puts("");
@@ -84,10 +92,11 @@ int main(int argc, char **argv) {
     puts("");
   }
 
-  mm(VEC2D_ARGS(&a), VEC2D_ARGS(&b), VEC2D_ARGS(&o));
+  mm(VEC2D_ARGS(&a), VEC2D_ARGS(&b), VEC2D_ARGS(&o), 1.2f, 1.3f);
   mm_refimpl(&a, &b, &o_ref);
 
-  if (verbose) {
+  if (verbose)
+  {
     puts("Result O:");
     vec_f2d_dump(&o);
     puts("");
@@ -97,7 +106,8 @@ int main(int argc, char **argv) {
     puts("");
   }
 
-  if (!vec_f2d_compare(&o, &o_ref)) {
+  if (!vec_f2d_compare(&o, &o_ref))
+  {
     fputs("Result differs from reference result\n", stderr);
     exit(1);
   }
