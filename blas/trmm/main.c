@@ -1,3 +1,4 @@
+#include "../../../polybench-c-4.2.1-beta/linear-algebra/blas/trmm/trmm.h"
 #include "../../memref.h"
 #include <stdio.h>
 #include <string.h>
@@ -17,64 +18,59 @@
 */
 
 /* Generated matrix multiplication function under test */
-// See: https://mlir.llvm.org/docs/ConversionToLLVMDialect/#calling-convention-for-memref
-extern void trmm(
-    float *a_allocatedptr, float *a_alignedptr,
-    int64_t a_offset, int64_t a_sizes0, int64_t a_sizes1,
-    int64_t a_strides0, int64_t a_strides1,
+// See:
+// https://mlir.llvm.org/docs/ConversionToLLVMDialect/#calling-convention-for-memref
+extern void scop_entry(float *a_allocatedptr, float *a_alignedptr,
+                       int64_t a_offset, int64_t a_sizes0, int64_t a_sizes1,
+                       int64_t a_strides0, int64_t a_strides1,
 
-    float *b_allocatedptr, float *b_alignedptr,
-    int64_t b_offset, int64_t b_sizes0, int64_t b_sizes1,
-    int64_t b_strides0, int64_t b_strides1,
+                       float *b_allocatedptr, float *b_alignedptr,
+                       int64_t b_offset, int64_t b_sizes0, int64_t b_sizes1,
+                       int64_t b_strides0, int64_t b_strides1,
 
-    const float alpha);
+                       const float alpha);
 
 /* Reference implementation of a matrix multiplication */
-void mm_refimpl(struct vec_f2d *a, struct vec_f2d *b)
-{
+void mm_refimpl(struct vec_f2d *a, struct vec_f2d *b) {
 
-  float alpha = 2;
+  float alpha = ALPHA;
 
   for (int i = 0; i < a->sizes[1]; i++)
-    for (int j = 0; j < b->sizes[1]; j++)
-    {
+    for (int j = 0; j < b->sizes[1]; j++) {
       for (int k = i; k < a->sizes[0]; k++)
-        vec_f2d_set(b, i, j, vec_f2d_get(b, i, j) + vec_f2d_get(a, k, i) * vec_f2d_get(b, k, j));
+        vec_f2d_set(b, i, j, vec_f2d_get(b, i, j) +
+                                 vec_f2d_get(a, k, i) * vec_f2d_get(b, k, j));
       vec_f2d_set(b, i, j, alpha * vec_f2d_get(b, i, j));
     }
 }
 
 /* Initialize vector with value x at position (x) */
-void init_vector(struct vec_f1d *v)
-{
+void init_vector(struct vec_f1d *v) {
   for (int64_t x = 0; x < v->sizes[0]; x++)
     vec_f1d_set(v, x, x);
 }
 
 /* Initialize matrix with value x+y at position (x, y) */
-void init_matrix(struct vec_f2d *m)
-{
+void init_matrix(struct vec_f2d *m) {
   for (int64_t x = 0; x < m->sizes[0]; x++)
     for (int64_t y = 0; y < m->sizes[1]; y++)
 
-      vec_f2d_set(m, x, y, x + y);
+      vec_f2d_set(m, x, y, 2);
 }
 
-void die_usage(const char *program_name)
-{
+void die_usage(const char *program_name) {
   fprintf(stderr, "Usage: %s [-v]\n", program_name);
   exit(1);
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
   struct vec_f2d a, c, d;
-  int verbose = 1;
-  int n = 4;
-  int m = 6;
+  int verbose = 0;
+  int n = M;
+  int m = N;
 
-  if (vec_f2d_alloc(&a, n, n) || vec_f2d_alloc(&c, n, m) || vec_f2d_alloc(&d, n, m))
-  {
+  if (vec_f2d_alloc(&a, n, n) || vec_f2d_alloc(&c, n, m) ||
+      vec_f2d_alloc(&d, n, m)) {
     fprintf(stderr, "Allocation failed");
     return 1;
   }
@@ -83,8 +79,7 @@ int main(int argc, char **argv)
   init_matrix(&c);
   init_matrix(&d);
 
-  if (verbose)
-  {
+  if (verbose) {
     puts("O_REF:");
     vec_f2d_dump(&d);
     puts("");
@@ -94,12 +89,11 @@ int main(int argc, char **argv)
     puts("");
   }
 
-  trmm(VEC2D_ARGS(&a), VEC2D_ARGS(&c), 2);
+  scop_entry(VEC2D_ARGS(&a), VEC2D_ARGS(&c), ALPHA);
 
   mm_refimpl(&a, &d);
 
-  if (verbose)
-  {
+  if (verbose) {
     puts("Result O:");
     vec_f2d_dump(&c);
     puts("");
@@ -109,8 +103,7 @@ int main(int argc, char **argv)
     puts("");
   }
 
-  if (!vec_f2d_compare(&c, &d))
-  {
+  if (!vec_f2d_compare(&c, &d)) {
     fputs("Result differs from reference result\n", stderr);
     exit(1);
   }

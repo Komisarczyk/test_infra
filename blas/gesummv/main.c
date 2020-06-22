@@ -1,4 +1,4 @@
-#include "../../../polybench-c-4.2.1-beta/linear-algebra/kernels/mvt/mvt.h"
+#include "../../../polybench-c-4.2.1-beta/linear-algebra/blas/gesummv/gesummv.h"
 #include "../../memref.h"
 #include <stdio.h>
 #include <string.h>
@@ -24,6 +24,12 @@ extern void scop_entry(float *a_allocatedptr, float *a_alignedptr,
                        int64_t a_offset, int64_t a_sizes0, int64_t a_sizes1,
                        int64_t a_strides0, int64_t a_strides1,
 
+                       float *b_allocatedptr, float *b_alignedptr,
+                       int64_t b_offset, int64_t b_sizes0, int64_t b_sizes1,
+                       int64_t b_strides0, int64_t b_strides1,
+
+                       const float alpha, const float beta,
+
                        float *tmp_allocatedptr, float *tmp_alignedptr,
                        int64_t tmp_offset, int64_t tmp_sizes0,
                        int64_t tmp_strides0,
@@ -32,23 +38,27 @@ extern void scop_entry(float *a_allocatedptr, float *a_alignedptr,
                        int64_t x_offset, int64_t x_sizes0, int64_t x_strides0,
 
                        float *y_allocatedptr, float *y_alignedptr,
-                       int64_t y_offset, int64_t y_sizes0, int64_t y_strides0,
-
-                       float *z_allocatedptr, float *z_alignedptr,
-                       int64_t z_offset, int64_t z_sizes0, int64_t z_strides0);
+                       int64_t y_offset, int64_t y_sizes0, int64_t y_strides0);
 
 /* Reference implementation of a matrix multiplication */
-void mm_refimpl(struct vec_f2d *a, struct vec_f1d *x1, struct vec_f1d *y1,
-                struct vec_f1d *x2, struct vec_f1d *y2) {
+void mm_refimpl(struct vec_f2d *a, struct vec_f2d *b, struct vec_f1d *tmp,
+                struct vec_f1d *x, struct vec_f1d *y_ref) {
 
-  for (int i = 0; i < x1->sizes[0]; i++)
-    for (int j = 0; j < a->sizes[1]; j++)
-      vec_f1d_set(x1, i, vec_f2d_get(a, i, j) * vec_f1d_get(y1, j) +
-                             vec_f1d_get(x1, i));
-  for (int i = 0; i < x2->sizes[0]; i++)
-    for (int j = 0; j < a->sizes[0]; j++)
-      vec_f1d_set(x2, i, vec_f2d_get(a, j, i) * vec_f1d_get(y2, j) +
-                             vec_f1d_get(x2, i));
+  float alpha = ALPHA;
+  float beta = BETA;
+
+  for (int i = 0; i < tmp->sizes[0]; i++) {
+    vec_f1d_set(tmp, i, 0.0);
+    vec_f1d_set(y_ref, i, 0.0);
+    for (int j = 0; j < a->sizes[1]; j++) {
+      vec_f1d_set(tmp, i, vec_f2d_get(a, i, j) * vec_f1d_get(x, j) +
+                              vec_f1d_get(tmp, i));
+      vec_f1d_set(y_ref, i, vec_f2d_get(b, i, j) * vec_f1d_get(x, j) +
+                                vec_f1d_get(y_ref, i));
+    }
+    vec_f1d_set(y_ref, i,
+                alpha * vec_f1d_get(tmp, i) + beta * vec_f1d_get(y_ref, i));
+  }
 }
 
 /* Initialize vector with value x at position (x) */
@@ -70,25 +80,24 @@ void die_usage(const char *program_name) {
 }
 
 int main(int argc, char **argv) {
-  struct vec_f2d a;
-  struct vec_f1d tmp, x1, y1, x2, y2, x2_ref;
+  struct vec_f2d a, b;
+  struct vec_f1d tmp, x, y, y_ref;
   int verbose = 0;
   int n = N;
 
-  if (vec_f2d_alloc(&a, n, n) || vec_f1d_alloc(&x1, n) ||
-      vec_f1d_alloc(&x2, n) || vec_f1d_alloc(&y1, n) || vec_f1d_alloc(&y2, n) ||
-      vec_f1d_alloc(&x2_ref, n)) {
+  if (vec_f2d_alloc(&a, n, n) || vec_f2d_alloc(&b, n, n) ||
+      vec_f1d_alloc(&tmp, n) || vec_f1d_alloc(&x, n) || vec_f1d_alloc(&y, n) ||
+      vec_f1d_alloc(&y_ref, n)) {
     fprintf(stderr, "Allocation failed");
     return 1;
   }
 
   init_matrix(&a);
+  init_matrix(&b);
   init_vector(&tmp);
-  init_vector(&x1);
-  init_vector(&y1);
-  init_vector(&x2);
-  init_vector(&y2);
-  init_vector(&x2_ref);
+  init_vector(&x);
+  init_vector(&y);
+  init_vector(&y_ref);
 
   if (verbose) {
     puts("A:");
@@ -96,37 +105,41 @@ int main(int argc, char **argv) {
     puts("");
 
     puts("O:");
-    vec_f1d_dump(&y1);
+    vec_f1d_dump(&y);
     puts("");
   }
 
-  scop_entry(VEC2D_ARGS(&a), VEC1D_ARGS(&x1), VEC1D_ARGS(&x2), VEC1D_ARGS(&y1),
-             VEC1D_ARGS(&y2));
+  scop_entry(VEC2D_ARGS(&a), VEC2D_ARGS(&b), ALPHA, BETA, VEC1D_ARGS(&tmp),
+             VEC1D_ARGS(&x), VEC1D_ARGS(&y));
 
-  mm_refimpl(&a, &x1, &y1, &x2_ref, &y2);
+  init_matrix(&a);
+  init_matrix(&b);
+  init_vector(&tmp);
+  init_vector(&x);
+
+  mm_refimpl(&a, &b, &tmp, &x, &y_ref);
 
   if (verbose) {
     puts("Result O:");
-    vec_f1d_dump(&x2);
+    vec_f1d_dump(&y);
     puts("");
 
     puts("Reference O:");
-    vec_f1d_dump(&x2_ref);
+    vec_f1d_dump(&y_ref);
     puts("");
   }
 
-  if (!vec_f1d_compare(&x2, &x2_ref)) {
+  if (!vec_f1d_compare(&y, &y_ref)) {
     fputs("Result differs from reference result\n", stderr);
     exit(1);
   }
 
   vec_f2d_destroy(&a);
-
-  vec_f1d_destroy(&x1);
-  vec_f1d_destroy(&y1);
-  vec_f1d_destroy(&x2);
-  vec_f1d_destroy(&y2);
-  vec_f1d_destroy(&x2_ref);
+  vec_f2d_destroy(&b);
+  vec_f1d_destroy(&tmp);
+  vec_f1d_destroy(&x);
+  vec_f1d_destroy(&y);
+  vec_f1d_destroy(&y_ref);
 
   return 0;
 }

@@ -1,4 +1,4 @@
-#include "../../../polybench-c-4.2.1-beta/linear-algebra/solvers/lu/lu.h"
+#include "../../../polybench-c-4.2.1-beta/linear-algebra/blas/syrk/syrk.h"
 #include "../../memref.h"
 #include <stdio.h>
 #include <string.h>
@@ -22,24 +22,28 @@
 // https://mlir.llvm.org/docs/ConversionToLLVMDialect/#calling-convention-for-memref
 extern void scop_entry(float *a_allocatedptr, float *a_alignedptr,
                        int64_t a_offset, int64_t a_sizes0, int64_t a_sizes1,
-                       int64_t a_strides0, int64_t a_strides1);
+                       int64_t a_strides0, int64_t a_strides1,
+
+                       float *c_allocatedptr, float *c_alignedptr,
+                       int64_t c_offset, int64_t c_sizes0, int64_t c_sizes1,
+                       int64_t c_strides0, int64_t c_strides1,
+
+                       const float alpha, const float beta);
 
 /* Reference implementation of a matrix multiplication */
-void mm_refimpl(struct vec_f2d *a) {
+void mm_refimpl(struct vec_f2d *a, struct vec_f2d *c) {
 
-  for (int i = 0; i < a->sizes[0]; i++) {
-    for (int j = 0; j < i; j++) {
-      for (int k = 0; k < j; k++) {
-        vec_f2d_set(a, i, j, vec_f2d_get(a, i, j) -
-                                 vec_f2d_get(a, i, k) * vec_f2d_get(a, k, j));
-      }
-      vec_f2d_set(a, i, j, vec_f2d_get(a, i, j) / vec_f2d_get(a, j, j));
-    }
-    for (int j = i; j < a->sizes[1]; j++) {
-      for (int k = 0; k < i; k++) {
-        vec_f2d_set(a, i, j, vec_f2d_get(a, i, j) -
-                                 vec_f2d_get(a, i, k) * vec_f2d_get(a, k, j));
-      }
+  float alpha = ALPHA;
+  float beta = BETA;
+
+  for (int i = 0; i < c->sizes[0]; i++) {
+    for (int j = 0; j <= i; j++)
+      vec_f2d_set(c, i, j, vec_f2d_get(c, i, j) * beta);
+    for (int k = 0; k < a->sizes[1]; k++) {
+      for (int j = 0; j <= i; j++)
+        vec_f2d_set(c, i, j,
+                    vec_f2d_get(c, i, j) +
+                        alpha * vec_f2d_get(a, i, k) * vec_f2d_get(a, j, k));
     }
   }
 }
@@ -63,48 +67,54 @@ void die_usage(const char *program_name) {
 }
 
 int main(int argc, char **argv) {
-  struct vec_f2d a, a_ref;
+  struct vec_f2d a, c, c_ref;
   int verbose = 0;
   int n = N;
+  int m = M;
 
-  if (vec_f2d_alloc(&a, n, n) || vec_f2d_alloc(&a_ref, n, n)) {
+  if (vec_f2d_alloc(&a, n, m) || vec_f2d_alloc(&c, n, n) ||
+      vec_f2d_alloc(&c_ref, n, n)) {
     fprintf(stderr, "Allocation failed");
     return 1;
   }
 
   init_matrix(&a);
-  init_matrix(&a_ref);
+  init_matrix(&c);
+  init_matrix(&c_ref);
 
   if (verbose) {
     puts("A:");
     vec_f2d_dump(&a);
     puts("");
 
-    puts("A:");
-    vec_f2d_dump(&a_ref);
+    puts("O:");
+    vec_f2d_dump(&c);
     puts("");
   }
 
-  scop_entry(VEC2D_ARGS(&a));
+  scop_entry(VEC2D_ARGS(&a), VEC2D_ARGS(&c), ALPHA, BETA);
 
-  mm_refimpl(&a_ref);
+  mm_refimpl(&a, &c_ref);
 
   if (verbose) {
     puts("Result O:");
-    vec_f2d_dump(&a);
+    vec_f2d_dump(&c);
     puts("");
 
     puts("Reference O:");
-    vec_f2d_dump(&a_ref);
+    vec_f2d_dump(&c_ref);
     puts("");
   }
 
-  if (!vec_f2d_compare(&a, &a_ref)) {
+  if (!vec_f2d_compare(&c, &c_ref)) {
     fputs("Result differs from reference result\n", stderr);
     exit(1);
   }
 
   vec_f2d_destroy(&a);
-  vec_f2d_destroy(&a_ref);
+
+  vec_f2d_destroy(&c);
+  vec_f2d_destroy(&c_ref);
+
   return 0;
 }

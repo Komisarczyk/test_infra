@@ -218,8 +218,10 @@ static inline int vec_f2d_compare(struct vec_f2d *a, struct vec_f2d *b)
 	/* Compare elements */
 	for (int64_t y = 0; y < a->sizes[1]; y++)
 		for (int64_t x = 0; x < a->sizes[0]; x++)
-			if (vec_f2d_get(a, x, y) != vec_f2d_get(b, x, y))
+			if (vec_f2d_get(a, x, y) != vec_f2d_get(b, x, y)){
+				printf("%f    %f \n",vec_f2d_get(a, x, y),vec_f2d_get(b, x, y));
 				return 0;
+			}
 
 	return 1;
 }
