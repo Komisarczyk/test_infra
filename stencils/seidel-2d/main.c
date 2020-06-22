@@ -1,4 +1,6 @@
-#include "../../../polybench-c-4.2.1-beta/stencils/seidel-2d/seidel-2d.h"
+#define ALPHA 1.0f
+#define BETA 2.0f
+#include "../../../polybench/stencils/seidel-2d/seidel-2d.h"
 #include "../../memref.h"
 #include <stdio.h>
 #include <string.h>

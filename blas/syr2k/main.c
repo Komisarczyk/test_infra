@@ -1,4 +1,6 @@
-#include "../../../polybench-c-4.2.1-beta/linear-algebra/blas/syr2k/syr2k.h"
+#define ALPHA 1.0f
+#define BETA 2.0f
+#include "../../../polybench/linear-algebra/blas/syr2k/syr2k.h"
 #include "../../memref.h"
 #include <stdio.h>
 #include <string.h>

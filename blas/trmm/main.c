@@ -1,4 +1,6 @@
-#include "../../../polybench-c-4.2.1-beta/linear-algebra/blas/trmm/trmm.h"
+#define ALPHA 1.0f
+#define BETA 2.0f
+#include "../../../polybench/linear-algebra/blas/trmm/trmm.h"
 #include "../../memref.h"
 #include <stdio.h>
 #include <string.h>
@@ -35,9 +37,9 @@ void mm_refimpl(struct vec_f2d *a, struct vec_f2d *b) {
 
   float alpha = ALPHA;
 
-  for (int i = 0; i < a->sizes[1]; i++)
-    for (int j = 0; j < b->sizes[1]; j++) {
-      for (int k = i; k < a->sizes[0]; k++)
+  for (int i = 0; i < M; i++)
+    for (int j = 0; j < N; j++) {
+      for (int k = i; k < M; k++)
         vec_f2d_set(b, i, j, vec_f2d_get(b, i, j) +
                                  vec_f2d_get(a, k, i) * vec_f2d_get(b, k, j));
       vec_f2d_set(b, i, j, alpha * vec_f2d_get(b, i, j));

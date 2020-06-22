@@ -1,5 +1,5 @@
 #!/bin/sh
-#needs to be in a directory containing polybench-c-4.2.1-beta
+#needs to be in a directory containing polybench
 FILES=$(ls -d */)
 for FILE in $FILES 
     do 
@@ -15,7 +15,7 @@ for FILE in $FILES
                         cd $KERNEL
                         {
                             rm *.mlir
-                            mlir-pet -I ../../../polybench-c-4.2.1-beta/utilities -I ../../../polybench-c-4.2.1-beta/linear-algebra/$FILE/gemver -I ../../../polybench-c-4.2.1-beta/utilities/polybench.c ../../../polybench-c-4.2.1-beta/$FILE/$KERNEL/$KERNEL.c > $KERNEL.mlir
+                            mlir-pet -I ../../../polybench/utilities -I ../../../polybench/linear-algebra/$FILE/gemver -I ../../../polybench/utilities/polybench.c ../../../polybench/$FILE/$KERNEL/$KERNEL.c > $KERNEL.mlir
                             make clean                         
                             make all
                         } &> /dev/null
@@ -36,7 +36,7 @@ for FILE in $FILES
                         cd $KERNEL
                         {
                             rm *.mlir
-                            mlir-pet -I ../../../polybench-c-4.2.1-beta/utilities -I ../../../polybench-c-4.2.1-beta/linear-algebra/$FILE/gemver -I ../../../polybench-c-4.2.1-beta/utilities/polybench.c ../../../polybench-c-4.2.1-beta/linear-algebra/$FILE/$KERNEL/$KERNEL.c > $KERNEL.mlir
+                            mlir-pet -I ../../../polybench/utilities -I ../../../polybench/linear-algebra/$FILE/gemver -I ../../../polybench/utilities/polybench.c ../../../polybench/linear-algebra/$FILE/$KERNEL/$KERNEL.c > $KERNEL.mlir
                             make clean  
                             make all
                         } &> /dev/null

@@ -1,4 +1,6 @@
-#include "../../../polybench-c-4.2.1-beta/stencils/heat-3d/heat-3d.h"
+#define ALPHA 1.0f
+#define BETA 2.0f
+#include "../../../polybench/stencils/heat-3d/heat-3d.h"
 #include "../../memref.h"
 #include <stdio.h>
 #include <string.h>

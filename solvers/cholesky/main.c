@@ -1,4 +1,6 @@
-#include "../../../polybench-c-4.2.1-beta/linear-algebra/solvers/cholesky/cholesky.h"
+#define ALPHA 1.0f
+#define BETA 2.0f
+#include "../../../polybench/linear-algebra/solvers/cholesky/cholesky.h"
 #include "../../memref.h"
 #include <stdio.h>
 #include <string.h>
